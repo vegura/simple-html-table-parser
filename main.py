@@ -1,13 +1,10 @@
 import requests
 import bs4
-import numpy as np
 import csv
 
-table_content_destination = "out.csv"
 
-
-def get_page_raw():
-    return requests.get("https://www.worldfootball.net/schedule/bundesliga-2021-2022-spieltag/31/").text
+def get_page_raw(source_page):
+    return requests.get(source_page).text
 
 
 def parse_html_table(html_text, table_order_number=0):
@@ -20,28 +17,37 @@ def parse_html_table(html_text, table_order_number=0):
         row_content = []
         for table_cell in table_row.find_all("td"):
             row_content.append(table_cell.text.strip())
-        row_content = row_content[:-1]
         table_content_list.append(row_content)
     return table_content_list
 
 
-def save_list_table_as_csv(table_list):
-    table_array = np.array(table_list, dtype=str)
-    np.savetxt(table_content_destination, table_array, delimiter=",", newline="\n", fmt="%s")
-
-
-def save_list_csv(table_data: list, writing_type='a'):
-    with open(table_content_destination, 'a') as result_file:
+def save_list_csv(table_data: list, filename, writing_type='a'):
+    with open(filename, 'a') as result_file:
         csv_result_file = csv.writer(result_file)
         csv_result_file.writerows(table_data)
 
 
+def read_league_links():
+    leagues_list = []
+    with open("leagues.txt", "r") as leagues_pages_file:
+        leagues = leagues_pages_file.readlines()
+        for league in leagues:
+            leagues_list.append(league.strip("\n"))
+    return leagues_list
+
+
 def main():
-    page_content_raw = get_page_raw()
-    main_result_table = parse_html_table(page_content_raw)
-    team_details_table = parse_html_table(page_content_raw, 1)
-    save_list_csv(main_result_table)
-    save_list_csv(team_details_table)
+    league_page_links = read_league_links()
+    for league_page_link in league_page_links:
+        page_content_raw = get_page_raw(league_page_link)
+        main_result_table = parse_html_table(page_content_raw)
+        team_details_table = parse_html_table(page_content_raw, 1)
+
+        data_file_name = league_page_link.split("/")[-1] + ".csv"  # page name
+        print(data_file_name)
+
+        save_list_csv(main_result_table, data_file_name)
+        save_list_csv(team_details_table, data_file_name)
 
 
 if __name__ == "__main__":
